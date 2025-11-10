@@ -1,0 +1,48 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:f1betting;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: sa
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+    properties:
+      hibernate.format_sql: true
+      hibernate.show_sql: true
+  sql:
+    init:
+      mode: always
+  jpa.defer-datasource-initialization: true
+
+spring.h2.console.enabled: true
+spring.h2.console.path: /h2-console
+
+resilience4j:
+  ratelimiter:
+    instances:
+      openf1:
+        limitForPeriod: 3           # OpenF1: 3 requests per 1s
+        limitRefreshPeriod: 1s
+        timeoutDuration: 1s         # wait up to 1s for a slot
+  retry:
+    instances:
+      openf1:
+        max-attempts: 3
+        wait-duration: 1s
+        retry-exceptions:
+          - org.springframework.web.client.HttpClientErrorException.TooManyRequests
+
+
+event:
+  api:
+    url: https://api.openf1.org/v1/
+
+logging:
+  level:
+    io.github.resilience4j.retry: INFO
+    io.github.resilience4j.ratelimiter: INFO
+    org.springframework.web.client.RestTemplate: INFO
+
+

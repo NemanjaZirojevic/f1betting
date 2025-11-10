@@ -5,6 +5,7 @@ import com.sportygroup.f1betting.entity.BetStatus;
 import com.sportygroup.f1betting.entity.Event;
 import com.sportygroup.f1betting.entity.User;
 import com.sportygroup.f1betting.exceptions.DuplicateBetException;
+import com.sportygroup.f1betting.exceptions.EventFinishedException;
 import com.sportygroup.f1betting.model.EventOutcome;
 import com.sportygroup.f1betting.model.PlaceBetRequest;
 import com.sportygroup.f1betting.repository.BetRepository;
@@ -102,6 +103,28 @@ class BettingServiceTest {
   }
 
   @Test
+  void placeBet_throws_whenEventFinished_andDoesNotCheckBalance() {
+    // when
+    when(betRepository.existsByUser_IdAndEvent_Id(USER_ID, EVENT_ID)).thenReturn(false);
+
+
+    Event finished = Event.builder()
+        .id(EVENT_ID)
+        .winnerDriverId(99L)
+        .settledAt(Instant.now())
+        .build();
+    when(eventService.findEventById(EVENT_ID)).thenReturn(Optional.of(finished));
+
+    // when/then
+    assertThatThrownBy(() -> bettingService.placeBet(placeBetRequest))
+        .isInstanceOf(EventFinishedException.class)
+        .hasMessageContaining("already finished event");
+
+    verify(userService, never()).checkUserBalance(any());
+    verify(betRepository, never()).save(any());
+  }
+
+  @Test
   void settleOutcome_updatesStatuses_balances_marksEvent_andReturnsOutcome() {
     // given: two pending bets, one wins, one loses
     User u1 = User.builder().id(1L).balance(1000.0).build();
@@ -191,4 +214,5 @@ class BettingServiceTest {
     assertThat(outcome.numberOfWinningBets()).isZero();
     assertThat(outcome.numberOfLostBets()).isZero();
   }
+
 }

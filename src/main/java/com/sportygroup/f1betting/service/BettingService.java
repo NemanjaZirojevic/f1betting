@@ -5,6 +5,7 @@ import com.sportygroup.f1betting.entity.BetStatus;
 import com.sportygroup.f1betting.entity.Event;
 import com.sportygroup.f1betting.entity.User;
 import com.sportygroup.f1betting.exceptions.DuplicateBetException;
+import com.sportygroup.f1betting.exceptions.EventFinishedException;
 import com.sportygroup.f1betting.model.EventOutcome;
 import com.sportygroup.f1betting.model.PlaceBetRequest;
 import com.sportygroup.f1betting.repository.BetRepository;
@@ -32,9 +33,11 @@ public class BettingService {
     validateNoDuplicateBet(placeBetRequest.userId(), placeBetRequest.eventId());
 
     var event = eventService.findEventById(placeBetRequest.eventId())
-        .orElse(eventService.saveEvent(Event.builder().id(placeBetRequest.eventId()).build()));
+        .orElseGet(() -> eventService.saveEvent(Event.builder().id(placeBetRequest.eventId()).build()));
 
+    ensureEventOpen(event,placeBetRequest.eventId());
     User user = userService.checkUserBalance(placeBetRequest);
+
     var bet = Bet.builder()
         .user(user)
         .event(event)
@@ -66,7 +69,14 @@ public class BettingService {
         ));
   }
 
-
+  private void ensureEventOpen(Event event, Long eventId) {
+    Optional.ofNullable(event.getWinnerDriverId())
+        .ifPresent(winner -> {
+          throw new EventFinishedException(
+              "Can't place bet for already finished event (eventId=%d, winnerDriverId=%d)"
+                  .formatted(eventId, winner));
+        });
+  }
 
   private void updateUsersBalance(Map<Long, Double> deltasByUserId) {
     if (deltasByUserId.isEmpty()) return;

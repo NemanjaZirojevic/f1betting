@@ -28,4 +28,11 @@ public class GlobalExceptionHandler {
         .status(HttpStatus.BAD_REQUEST)
         .body(exception.getMessage());
   }
+
+  @ExceptionHandler({EventFinishedException.class})
+  public ResponseEntity<Object> handleEventFinishedException(EventFinishedException exception) {
+    return ResponseEntity
+        .status(HttpStatus.BAD_REQUEST)
+        .body(exception.getMessage());
+  }
 }

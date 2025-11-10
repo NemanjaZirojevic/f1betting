@@ -1,0 +1,5 @@
+services:
+  f1betting:
+    build: .
+    ports:
+      - "8080:8080"

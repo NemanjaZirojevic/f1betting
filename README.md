@@ -1,6 +1,6 @@
 # 🚀 F1 Betting Service
 
-A Spring Boot application that enables F1 event browsing, betting, and settling outcomes.
+A Spring Boot application that enables F1 event browsing, betting, and settling outcomes.  
 The service integrates with the **OpenF1 public API** to fetch real-time session and driver data.
 
 ---
@@ -8,19 +8,25 @@ The service integrates with the **OpenF1 public API** to fetch real-time session
 ## 🛠 Required Software
 
 | Tool | Version | Notes |
-|------|--------:|-------|
-| **Java** | 17+ | Required (project uses modern Java features) |
+|------|---------|-------|
+| **Java** | 17+ | Required for running locally |
 | **Gradle** | Wrapper included | Run with `./gradlew bootRun` |
 | **Spring Boot** | 3.5.x | Uses Hibernate 6, Jakarta EE 10 |
-| **H2 Database** | Included | In-memory DB for local development |
+| **H2 Database** | Included | In-memory for local development |
+| **Docker** | Optional | Run the app without installing Java |
+| **Docker Compose** | Optional | v1 or v2 supported |
+
+> **Note:** The application uses port **8080**.  
+> Make sure nothing else on your computer is already using this port.
 
 ---
 
-## ▶️ How to Run
+## ▶️ Running Locally
 
-### 1) Clone and run
+### 1) Clone and start the application
+
 ```bash
-git clone https://github.com/your-org/f1betting.git
+git clone https://github.com/NemanjaZirojevic/f1betting.git
 cd f1betting
 ./gradlew bootRun
 ```
@@ -28,10 +34,13 @@ cd f1betting
 Or via IDE (IntelliJ): run `F1bettingApplication`.
 
 ### 2) H2 Console
+
 ```
 http://localhost:8080/h2-console
 ```
+
 Credentials:
+
 ```
 JDBC URL: jdbc:h2:mem:f1betting
 Username: sa
@@ -40,7 +49,84 @@ Password: sa
 
 ---
 
-## ⚙️ Configuration (application.yml)
+## 🐳 Running the Application with Docker
+
+This project includes a `Dockerfile`, allowing you to run the application  
+**without installing Java or Gradle** on your machine.
+
+You can run the application using **Docker Compose (recommended)** or **plain Docker**.
+
+---
+
+### 🔹 A) Run with Docker Compose (recommended)
+
+Create a `compose.yml` file in the project root (or use the provided one):
+
+```yaml
+services:
+  f1betting:
+    build: .
+    ports:
+      - "8080:8080"
+```
+
+Now start the application:
+
+#### Compose v1:
+```bash
+docker-compose up --build
+```
+
+#### Compose v2:
+```bash
+docker compose up --build
+```
+
+Stop Docker:
+
+```bash
+docker-compose down   # or: docker compose down
+```
+
+---
+
+### 🔹 B) Run with plain Docker
+
+Build the Docker image:
+
+```bash
+docker build -t f1betting:latest .
+```
+
+Run the container:
+
+```bash
+docker run --rm -p 8080:8080 --name f1betting f1betting:latest
+```
+
+---
+
+### 🔹 C) Test the API
+
+```bash
+curl http://localhost:8080/api/events
+```
+
+Place a bet:
+
+```bash
+curl -X POST http://localhost:8080/api/bets   -H "Content-Type: application/json"   -d '{"userId":1,"eventId":1001,"driverId":44,"odds":3,"amount":50}'
+```
+
+Settle an outcome:
+
+```bash
+curl -X POST http://localhost:8080/api/events/1001/outcome   -H "Content-Type: application/json"   -d '{"winnerId":44}'
+```
+
+---
+
+## ⚙️ Configuration (`application.yml`)
 
 ```yaml
 event:
@@ -68,84 +154,8 @@ spring:
 ### 1) GET `/events`
 Fetches F1 event sessions plus driver markets (with random odds).
 
-**Query Params (all optional):**
-- `sessionType` — e.g., `Race`
-- `year` — e.g., `2024`
-- `country` — e.g., `Italy`
-
-**Example:**
-```
-GET /api/events?sessionType=Race&year=2024
-```
-
-**Example response:**
-```json
-[
-  {
-    "sessionKey": "9140",
-    "sessionType": "Race",
-    "year": "2024",
-    "country": "Spain",
-    "drivers": [
-      { "driverId": "1", "fullName": "Max Verstappen", "odds": 3 }
-    ]
-  }
-]
-```
-
----
-
 ### 2) POST `/bets`
 Place a new bet for a user.
 
-**Request Body (`PlaceBetRequest`):**
-```json
-{
-  "userId": 1,
-  "eventId": 1001,
-  "driverId": 44,
-  "odds": 3,
-  "amount": 50
-}
-```
-
-**Validations:**
-- `userId`, `eventId`, `driverId` — required
-- `odds` ≥ 1
-- `amount` ≥ 1
-- user must have enough balance
-- **cannot place two bets for the same (userId, eventId)** — returns 400 Bad Request
-
-**Response (201 Created):**
-```json
-{
-  "id": 12,
-  "user": 1,
-  "event": 1001,
-  "driverId": 44,
-  "amount": 50,
-  "odds": 3,
-  "status": "PENDING"
-}
-```
-
----
-
-### 3) POST `/bets/{eventId}/outcome`
-Mark an event as settled and update bets and balances.
-
-**Request Body (`EventOutcomeRequest`):**
-```json
-{ "winnerId": 44 }
-```
-
-**Response:**
-```json
-{
-  "eventId": 1001,
-  "winnerDriverId": 44,
-  "numberOfWinningBets": 2,
-  "numberOfLostBets": 5
-}
-```
-
+### 3) POST `/events/{eventId}/outcome`
+Settle an event and update bets and balances.

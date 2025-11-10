@@ -73,9 +73,9 @@ public class BettingService {
 
     List<User> users = userService.findAllById(deltasByUserId.keySet());
     List<User> updated = users.stream()
-        .map(u -> {
-          double delta = deltasByUserId.getOrDefault(u.getId(), 0.0);
-          return u.toBuilder().balance(u.getBalance() + delta).build();
+        .map(user -> {
+          double delta = deltasByUserId.getOrDefault(user.getId(), 0.0);
+          return user.toBuilder().balance(user.getBalance() + delta).build();
         })
         .toList();
 
